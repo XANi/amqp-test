@@ -4,6 +4,7 @@ use EV;
 use POE qw( Loop::AnyEvent );
 use POE::Component::Client::AMQP;
 use Data::Dumper;
+use Net::Domain qw(hostname hostfqdn hostdomain domainname);
 my $queue_name = 'tt';
 
 
@@ -11,12 +12,12 @@ Net::AMQP::Protocol->load_xml_spec('amqp0-9-1.xml');
 
 my $end = AnyEvent->condvar;
 my $amq = POE::Component::Client::AMQP->create(
-    RemoteAddress => 'd01.home.zxz.li',
+    RemoteAddress => 'd03.home.zxz.li',
 );
 
 my $i;
 
- $queue_name .= $$;
+$queue_name .= '_' . hostfqdn() . ':' . $$;
  my $channel = $amq->channel();
 # print "binding queue to exchange\n";
 # $channel->send_frames(
@@ -39,7 +40,7 @@ my $queue = $channel->queue($queue_name,
                                 'x-ha-policy' => 'all',
                             },
                         });
-print "binding queue to exchange\n";
+print "binding queue [$queue_name] to exchange\n";
 $channel->send_frames(
     Net::AMQP::Protocol::Queue::Bind->new(
         queue => $queue_name,
@@ -52,7 +53,7 @@ $queue->subscribe(
     sub {
         my ($payload, $meta) = @_;
         my $reply_to = $meta->{header_frame}->reply_to;
-        print ++$i .  " Msg received: $payload\n";
+       # print ++$i .  " Msg received: $payload\n";
 #        print Dumper $payload;
 #        print Dumper $meta;
 #        $amq->channel(1)->queue($reply_to)->publish("Message received");
