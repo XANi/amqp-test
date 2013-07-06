@@ -4,7 +4,7 @@ use EV;
 use POE qw( Loop::AnyEvent );
 use POE::Component::Client::AMQP;
 use Data::Dumper;
-my $queue_name = 'test_queue4';
+my $queue_name = 'tt';
 
 
 Net::AMQP::Protocol->load_xml_spec('amqp0-9-1.xml');
@@ -15,7 +15,20 @@ my $amq = POE::Component::Client::AMQP->create(
 );
 
 my $i;
-$amq->channel(1)->queue($queue_name,
+
+ $queue_name .= $$;
+ my $channel = $amq->channel();
+# print "binding queue to exchange\n";
+# $channel->send_frames(
+#     Net::AMQP::Protocol::Queue::Bind->new(
+#         queue => $queue_name,
+#         exchange => 'test_topic',
+#         routing_key => 'test.topic',
+#     ),
+#);
+
+
+my $queue = $channel->queue($queue_name,
                         {
                             auto_delete => 0,
                             exclusive => 0,
@@ -25,11 +38,21 @@ $amq->channel(1)->queue($queue_name,
                                 'x-expires' => 60 * 1000,
                                 'x-ha-policy' => 'all',
                             },
-                        })->subscribe(
+                        });
+print "binding queue to exchange\n";
+$channel->send_frames(
+    Net::AMQP::Protocol::Queue::Bind->new(
+        queue => $queue_name,
+        exchange => 'test_topic',
+        routing_key => 'test.topic',
+    ),
+);
+
+$queue->subscribe(
     sub {
         my ($payload, $meta) = @_;
         my $reply_to = $meta->{header_frame}->reply_to;
-#        print ++$i .  " Msg received: $payload\n";
+        print ++$i .  " Msg received: $payload\n";
 #        print Dumper $payload;
 #        print Dumper $meta;
 #        $amq->channel(1)->queue($reply_to)->publish("Message received");
